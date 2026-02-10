@@ -1,0 +1,2615 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    
+    <meta name="theme-color" content="#0a1929" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>SSR 99 Position Switch Fault Decoder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 16px;
+            background: #000000;
+            padding-top: 0;
+            padding-bottom: env(safe-area-inset-bottom);
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 150, 255, 0.03) 0%, transparent 50%),
+                linear-gradient(180deg, #0a0e27 0%, #0d1128 100%);
+            padding: 15px;
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            margin-top: env(safe-area-inset-top);
+            background: rgba(13, 17, 40, 0.95);
+            border-radius: 8px;
+            box-shadow: 
+                0 0 40px rgba(0, 255, 255, 0.1),
+                0 0 80px rgba(0, 150, 255, 0.05),
+                inset 0 0 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0a1929 0%, #1a2332 100%);
+            color: #00ffff;
+            padding: 20px 30px;
+            padding-top: calc(20px + env(safe-area-inset-top));
+            text-align: center;
+            border-bottom: 2px solid #00ffff;
+            box-shadow: 0 4px 20px rgba(0, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+
+        /* Header icon buttons (Guide / Reference) */
+        .header{ position: relative; padding: 16px 18px; }
+        /* keep titles centered but reserve room for icons */
+        .header h1, .header h2{ position: relative; z-index: 2; }
+        .header-icon{
+            position: absolute;
+            top: calc(20px + env(safe-area-inset-top) + 20px);
+            transform: none;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: rgba(0,0,0,0.22);
+            border: 1px solid rgba(0,255,255,0.28);
+            color: #00ffff;
+            box-shadow: 0 0 12px rgba(0,255,255,0.10), inset 0 0 18px rgba(0,0,0,0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            cursor: pointer;
+            font-size: 20px;
+            line-height: 1;
+            user-select: none;
+            transition: transform 0.08s ease, box-shadow 0.18s ease, background 0.18s ease;
+            z-index: 3;
+        }
+        .header-icon.left{ left: 10px; }
+        .header-icon.right{ right: 10px; }
+        .header-icon:hover{ box-shadow: 0 0 16px rgba(0,255,255,0.22), inset 0 0 18px rgba(0,0,0,0.35); }
+        .header-icon:active{ transform: translateY(calc(-50% + 1px)) scale(0.98); }
+        .header-icon:focus{ outline: none; box-shadow: 0 0 0 3px rgba(0,255,255,0.18), 0 0 16px rgba(0,255,255,0.22); }
+
+        @media (max-width: 520px){
+            .header{ padding: calc(14px + var(--safe-top, 0px)) 14px 14px; }
+            .header-icon{ width: 38px; height: 38px; font-size: 18px; }
+            .header-icon.left{ left: 8px; }
+            .header-icon.right{ right: 8px; }
+        }
+.header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+            animation: scan 3s infinite;
+        }
+
+        @keyframes scan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.35em;
+            font-weight: 600;
+            letter-spacing: 0.10em;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+            position: relative;
+            padding: 0 60px;
+        }
+        
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.05em;
+                letter-spacing: 0.02em;
+                padding: 0 55px;
+            }
+        }
+
+        .header h2 {
+            margin-top: 8px;
+            font-size: 1.05em;
+            font-weight: 400;
+            letter-spacing: 0.14em;
+            color: rgba(0, 255, 255, 0.78);
+            text-shadow: 0 0 6px rgba(0, 255, 255, 0.35);
+            position: relative;
+        }
+
+        .controls-bar {
+            background: rgba(10, 14, 39, 0.6);
+            padding: 15px 25px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            display: grid;
+            grid-template-columns: 260px 1fr 260px;
+            align-items: start;
+            gap: 15px;
+        }
+
+        .controls-left {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        .controls-spacer {
+            /* Empty spacer for symmetry */
+        }
+
+        .controls-right {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .reference-button {
+            background: linear-gradient(135deg, #1a0d2d 0%, #2a1a42 100%);
+            color: #00ffff;
+            border: 1px solid rgba(150, 0, 255, 0.4);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 1.0em;
+            transition: all 0.3s;
+            text-shadow: 0 0 5px rgba(150, 0, 255, 0.6);
+            width: 200px;
+        }
+
+        .reference-button:hover {
+            background: linear-gradient(135deg, #2a1a42 0%, #1a0d2d 100%);
+            box-shadow: 0 0 15px rgba(150, 0, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .guide-button, .clear-button {
+            background: linear-gradient(135deg, #0d1a2d 0%, #1a2942 100%);
+            color: #00ffff;
+            border: 1px solid rgba(0, 255, 255, 0.4);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 1.0em;
+            transition: all 0.3s;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.6);
+            width: 200px;
+        }
+
+         {
+            background: linear-gradient(135deg, #1a2d0d 0%, #29421a 100%);
+            border: 1px solid rgba(100, 255, 0, 0.4);
+            color: #88ff00;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 1.0em;
+            transition: all 0.3s;
+            text-shadow: 0 0 5px rgba(136, 255, 0, 0.6);
+            width: 200px;
+        }
+
+        .guide-button:hover, .clear-button:hover {
+            background: linear-gradient(135deg, #1a2942 0%, #0d1a2d 100%);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        :hover {
+            background: linear-gradient(135deg, #29421a 0%, #1a2d0d 100%);
+            box-shadow: 0 0 15px rgba(100, 255, 0, 0.4);
+            transform: translateY(-2px);
+        }
+        /* Clear button - RED (harmonized) */
+        .clear-button{
+            background: linear-gradient(135deg, #2d0d16 0%, #421a24 100%);
+            border: 1px solid rgba(255, 0, 80, 0.45);
+            color: #ff3b6b;
+            text-shadow: 0 0 6px rgba(255, 0, 80, 0.55);
+        }
+        .clear-button:hover{
+            background: linear-gradient(135deg, #421a24 0%, #2d0d16 100%);
+            box-shadow: 0 0 16px rgba(255, 0, 80, 0.35);
+            transform: translateY(-2px);
+        }
+
+
+        .diagnostic-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            justify-self: center;
+        }
+
+        .diagnostic-title {
+            color: #00ffff;
+            font-weight: bold;
+            font-size: 0.95em;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.6);
+            text-align: center;
+        }
+
+        .diagnostic-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 4px;
+            padding: 10px 15px;
+            max-height: 150px;
+            overflow-y: auto;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .diagnostic-content {
+            font-size: 0.92em;
+            line-height: 1.6;
+        }
+
+        .diagnostic-item {
+            margin-bottom: 4px;
+            padding: 2px 0;
+        }
+
+        .diagnostic-empty {
+            color: #00ff88;
+            font-style: italic;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #0d1128 0%, #0a0e27 100%);
+            margin: 5% auto;
+            padding: 30px;
+            border: 2px solid rgba(0, 255, 255, 0.4);
+            border-radius: 8px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.3);
+            position: relative;
+        }
+
+/* === Modal scroll lock & overscroll containment === */
+html.modal-open, body.modal-open{
+    overflow: hidden;
+    height: 100%;
+    touch-action: none;
+}
+.modal{ overscroll-behavior: contain; }
+.modal-content{
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+
+        .modal-content-wide {
+            max-width: 1100px;
+            width: 95%;
+        }
+
+        .reference-section {
+            margin-bottom: 25px;
+        }
+
+        .reference-section h3 {
+            color: #00ffff;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .reference-section h4 {
+            font-size: 0.95em;
+            margin-bottom: 8px;
+        }
+
+        .section-note {
+            font-size: 0.95em;
+            color: #8bb9d9;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .reference-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+            margin-top: 10px;
+        }
+
+        .reference-table th {
+            background: rgba(0, 255, 255, 0.1);
+            color: #00ffff;
+            padding: 8px;
+            text-align: left;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .reference-table td {
+            padding: 6px 8px;
+            border: 1px solid rgba(0, 255, 255, 0.1);
+            color: #8bb9d9;
+        }
+
+        .reference-table tbody tr:hover {
+            background: rgba(0, 255, 255, 0.05);
+        }
+
+        .compact-list {
+            font-size: 1.0em;
+            line-height: 1.6;
+            color: #8bb9d9;
+            margin-left: 20px;
+        }
+
+        .compact-list li {
+            margin-bottom: 8px;
+        }
+
+        .reference-footer {
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 255, 255, 0.2);
+            font-size: 0.95em;
+            color: #8bb9d9;
+            text-align: center;
+        }
+
+        .modal-header {
+            color: #00ffff;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            text-align: center;
+        }
+
+        .modal-content ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .modal-content li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            color: #8bb9d9;
+            font-size: 1.0em;
+            line-height: 1.5;
+        }
+
+        .modal-content li:before {
+            content: "►";
+            position: absolute;
+            left: 0;
+            color: #00ffff;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.8);
+        }
+
+        .close-modal {
+            background: linear-gradient(135deg, #0d1a2d 0%, #1a2942 100%);
+            color: #00ffff;
+            border: 1px solid rgba(0, 255, 255, 0.4);
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 1.0em;
+            margin-top: 20px;
+            transition: all 0.3s;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .close-modal:hover {
+            background: linear-gradient(135deg, #1a2942 0%, #0d1a2d 100%);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+        }
+
+        .decoder-section {
+            padding: 15px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+
+        #decoderTable {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+            table-layout: fixed;
+        }
+
+        #decoderTable thead {
+            background: linear-gradient(135deg, #0d1a2d 0%, #1a2942 100%);
+            color: #00ffff;
+            border-bottom: 2px solid #00ffff;
+            box-shadow: 0 2px 10px rgba(0, 255, 255, 0.3);
+        }
+
+        #decoderTable th {
+            padding: 8px 4px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.95em;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: linear-gradient(135deg, #0d1a2d 0%, #1a2942 100%);
+            border-right: 1px solid rgba(0, 255, 255, 0.1);
+            text-shadow: 0 0 6px rgba(0, 255, 255, 0.8);
+            white-space: normal;
+            word-wrap: break-word;
+        }
+
+        #decoderTable td {
+            padding: 8px 4px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.08);
+            border-right: 1px solid rgba(0, 255, 255, 0.05);
+            background: rgba(13, 17, 40, 0.4);
+            text-align: center;
+            vertical-align: middle;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+
+        #decoderTable tbody tr {
+            transition: all 0.2s;
+        }
+
+        #decoderTable tbody tr:hover {
+            background: rgba(0, 255, 255, 0.05);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
+        }
+
+        .position-col {
+            font-weight: bold;
+            color: #00ffff;
+            width: 40px;
+            text-align: center;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.6);
+            font-size: 1em;
+        }
+
+        .hex-col {
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 30, 50, 0.5);
+            font-weight: bold;
+            width: 55px;
+            text-align: center;
+        }
+
+        .desc-col {
+            font-weight: 600;
+            color: #00d4ff;
+            width: 120px;
+            text-shadow: 0 0 3px rgba(0, 212, 255, 0.4);
+            font-size: 0.95em;
+        }
+
+        .bit-col {
+            font-size: 0.95em;
+            color: #8bb9d9;
+            width: 130px;
+            padding: 8px 4px;
+        }
+
+        .binary-col {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            width: 85px;
+            text-align: center;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            min-width: 45px;
+            padding: 5px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.0em;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            text-align: center;
+            background: rgba(0, 20, 40, 0.6);
+            color: #00ffff;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 
+                0 0 10px rgba(0, 255, 255, 0.6),
+                inset 0 0 10px rgba(0, 255, 255, 0.1);
+            background: rgba(0, 30, 50, 0.8);
+        }
+
+        input[type="text"].error {
+            border-color: #ff0050;
+            box-shadow: 0 0 10px rgba(255, 0, 80, 0.6);
+        }
+
+        .status-ok {
+            color: #00ff88;
+            font-weight: 600;
+            text-shadow: 0 0 5px rgba(0, 255, 136, 0.6);
+        }
+
+        .status-fault {
+            color: #ff0050;
+            font-weight: 600;
+            text-shadow: 0 0 5px rgba(255, 0, 80, 0.6);
+        }
+
+        .status-warning {
+            color: #ffaa00;
+            font-weight: 600;
+            text-shadow: 0 0 5px rgba(255, 170, 0, 0.6);
+        }
+
+        .status-neutral {
+            color: #6b8ca8;
+        }
+
+        .status-na {
+            color: #4a4a4a;
+            font-style: italic;
+        }
+
+        .binary-display {
+            display: inline-flex;
+            gap: 1px;
+        }
+
+        .binary-bit {
+            display: inline-block;
+            width: 10px;
+            height: 16px;
+            line-height: 16px;
+            text-align: center;
+            border-radius: 2px;
+            font-size: 0.7em;
+            font-weight: bold;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+        }
+
+        .binary-bit.one {
+            background: linear-gradient(135deg, #ff0050 0%, #cc0040 100%);
+            color: white;
+            box-shadow: 
+                0 0 8px rgba(255, 0, 80, 0.6),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+            text-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
+        }
+
+        .binary-bit.zero {
+            background: linear-gradient(135deg, #00aa66 0%, #008855 100%);
+            color: white;
+            box-shadow: 
+                0 0 8px rgba(0, 255, 136, 0.4),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+            text-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(10, 14, 39, 0.8);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #00ffff 0%, #0096ff 100%);
+            border-radius: 5px;
+            box-shadow: 0 0 6px rgba(0, 255, 255, 0.6);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #00ffff 0%, #00ccff 100%);
+        }
+
+        /* Fix: avoid sticky jitter inside modal reference tables */
+        .reference-table th{ position: static !important; }
+
+        @media (max-width: 1400px) {
+            body {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.15em;
+            }
+            .header h2{
+                font-size: 0.95em;
+                margin-top: 6px;
+            }
+            
+            th, td {
+                padding: 6px 3px;
+                font-size: 0.7em;
+            }
+
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls-left {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .diagnostic-panel {
+                width: 100%;
+            }
+        }
+    
+/* ============================
+   MOBILE-FIRST INPUT MODE UI
+   ============================ */
+:root{
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+}
+
+.header{ padding-top: calc(18px + var(--safe-top)); }
+body{ padding: 12px; padding-top: 12px; padding-left: calc(12px + var(--safe-left)); padding-right: calc(12px + var(--safe-right)); }
+
+.mode-toggle{
+    display:flex;
+    gap:10px;
+    width: 100%;
+}
+.mode-btn{
+    flex:1;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(0,255,255,0.35);
+    color:#00ffff;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor:pointer;
+    font-family: 'Consolas','Courier New',monospace;
+    font-size: 0.92em;
+    text-shadow: 0 0 5px rgba(0,255,255,0.5);
+    transition: transform .08s, box-shadow .18s, background .18s;
+    user-select:none;
+}
+.mode-btn:active{ transform: translateY(1px) scale(0.99); }
+.mode-btn.active{
+    background: linear-gradient(135deg, rgba(255, 210, 0, 0.20) 0%, rgba(255, 170, 0, 0.14) 100%);
+    box-shadow: 0 0 16px rgba(255, 210, 0, 0.22);
+    border-color: rgba(255, 210, 0, 0.55);
+    color: #ffd200;
+    text-shadow: 0 0 6px rgba(255, 210, 0, 0.55);
+}
+
+.controls-bar{
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.mode-wrap{ padding: 0 0 calc(210px + var(--safe-bottom)); }
+.mode{ display:none; }
+.mode.active{ display:block; }
+
+/* INPUT MODE CARDS */
+.cards{
+    display:flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 14px 120px;
+}
+.card{
+    border: 1px solid rgba(0,255,255,0.18);
+    background: rgba(10,14,39,0.35);
+    border-radius: 12px;
+    overflow:hidden;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.25);
+}
+.card-head{
+    display:flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.28);
+    border-bottom: 1px solid rgba(0,255,255,0.12);
+}
+.card-title{
+    color:#00ffff;
+    font-weight: 700;
+    letter-spacing: .6px;
+    text-shadow: 0 0 6px rgba(0,255,255,0.6);
+    font-size: 0.95em;
+}
+.card-sub{
+    color:#8bb9d9;
+    font-size: 0.92em;
+    white-space: nowrap;
+    overflow:hidden;
+    text-overflow: ellipsis;
+    max-width: 60vw;
+}
+
+.card-body{
+    padding: 12px;
+    display:grid;
+    grid-template-columns: 128px 1fr;
+    gap: 12px;
+    align-items: start;
+}
+
+.hex-big{
+    width: 100%;
+    padding: 14px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,255,255,0.35);
+    background: rgba(0,20,40,0.65);
+    color:#00ffff;
+    text-align:center;
+    font-size: 1.35em;
+    font-weight: 800;
+    letter-spacing: 2px;
+    box-shadow: inset 0 0 14px rgba(0,0,0,0.55);
+    font-family: 'Consolas','Courier New',monospace;
+    text-transform: uppercase;
+}
+.hex-big:focus{
+    outline:none;
+    border-color:#00ffff;
+    box-shadow: 0 0 10px rgba(0,255,255,0.55), inset 0 0 12px rgba(0,255,255,0.08);
+}
+.hex-big.error{ border-color:#ff0050; box-shadow: 0 0 10px rgba(255,0,80,0.55); }
+
+.card-summary{
+    background: rgba(0,0,0,0.22);
+    border: 1px solid rgba(0,255,255,0.10);
+    border-radius: 10px;
+    padding: 10px 10px;
+    min-height: 62px;
+}
+.summary-title{
+    color:#00d4ff;
+    font-weight: 700;
+    font-size: 0.92em;
+    margin-bottom: 6px;
+}
+.summary-lines{
+    font-size: 0.92em;
+    line-height: 1.55;
+}
+.summary-empty{ color:#00ff88; font-style: italic; }
+
+/* Sticky bottom nav */
+.dock{
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px calc(12px + var(--safe-right)) calc(10px + var(--safe-bottom)) calc(12px + var(--safe-left));
+    background: rgba(7, 10, 24, 0.88);
+    border-top: 1px solid rgba(0,255,255,0.16);
+    backdrop-filter: blur(10px);
+    z-index: 80;
+}
+.dock-row{
+    display:flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.navbtn{
+    flex:1;
+    background: linear-gradient(135deg, #0d1a2d 0%, #1a2942 100%);
+    border: 1px solid rgba(0,255,255,0.28);
+    color:#00ffff;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor:pointer;
+    font-family: 'Consolas','Courier New',monospace;
+    font-size: 0.95em;
+    transition: transform .08s, box-shadow .18s;
+    user-select:none;
+}
+.navbtn:active{ transform: translateY(1px) scale(0.99); }
+.navbtn.secondary{
+    background: rgba(0,0,0,0.25);
+}
+.navbtn.wide{ flex: 1.6; }
+
+
+/* Bulk paste modal */
+.modal textarea.bulk{
+    width: 100%;
+    min-height: 180px;
+    resize: vertical;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,255,255,0.22);
+    background: rgba(0,20,40,0.55);
+    color:#00ffff;
+    font-family: 'Consolas','Courier New',monospace;
+    font-size: 0.92em;
+    outline: none;
+}
+.modal .modal-actions{
+    display:flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+.modal .action-btn{
+    min-width: 190px;
+}
+
+/* Make decoder table header sticky only in table mode */
+th{ position: static; } /* neutralize global sticky */
+#decoderTable th{ position: sticky; top: 0; z-index: 10; }
+
+@media (min-width: 980px){
+    .cards{
+        display:grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        padding-bottom: 140px;
+    }
+    .card-sub{ max-width: 360px; }
+    .card-body{ grid-template-columns: 150px 1fr; }
+    .dock{ max-width: 980px; margin: 0 auto; left: 0; right: 0; border-radius: 14px 14px 0 0; }
+}
+
+@media (max-width: 768px){
+    .controls-bar{ grid-template-columns: 1fr; }
+    .controls-left, .controls-right{ align-items: stretch; }
+    .guide-button, .clear-button, .reference-button{ width: 100%; }
+    .diagnostic-panel{ max-width: 100%; }
+}
+    
+        /* ============================================================
+           PWA polish: header layout (icons + title aligned)
+           ============================================================ */
+        .header{
+            display: grid;
+            grid-template-columns: 44px 1fr 44px;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            padding-top: calc(12px + env(safe-area-inset-top));
+            background: linear-gradient(135deg, #0a1929 0%, #1a2332 100%);
+            color: #00ffff;
+            text-align: center;
+            border-bottom: 2px solid #00ffff;
+            box-shadow: 0 4px 20px rgba(0, 255, 255, 0.28);
+            position: relative;
+            overflow: hidden;
+        }
+        .header-title{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+            z-index: 2;
+        }
+        .header h1{
+            margin: 0;
+            font-size: 1.35em;
+            line-height: 1.15;
+            letter-spacing: 0.4px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.35);
+        }
+        .header-sub{
+            margin-top: 2px;
+            font-size: 0.95em;
+            line-height: 1.1;
+            color: rgba(0, 255, 255, 0.82);
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.20);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        .header-icon{
+            position: static !important;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: rgba(0,0,0,0.22);
+            border: 1px solid rgba(0,255,255,0.28);
+            color: #00ffff;
+            box-shadow: 0 0 12px rgba(0,255,255,0.10), inset 0 0 18px rgba(0,0,0,0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            cursor: pointer;
+            font-size: 20px;
+            line-height: 1;
+            user-select: none;
+            transition: transform 0.08s ease, box-shadow 0.18s ease, background 0.18s ease;
+            z-index: 3;
+        }
+        .header-icon:hover{
+            box-shadow: 0 0 16px rgba(0,255,255,0.22), inset 0 0 18px rgba(0,0,0,0.35);
+        }
+        .header-icon:active{
+            transform: translateY(1px) scale(0.98);
+        }
+        .header-icon:focus{
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0,255,255,0.18), 0 0 16px rgba(0,255,255,0.22);
+        }
+        @media (max-width: 520px){
+            .header{ grid-template-columns: 40px 1fr 40px; padding: 10px 12px; padding-top: calc(10px + env(safe-area-inset-top)); }
+            .header-icon{ width: 38px; height: 38px; font-size: 18px; border-radius: 13px; }
+            .header h1{ font-size: 1.20em; }
+            .header-sub{ font-size: 0.88em; }
+        }
+
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="header-icon" id="iconGuide" type="button" onclick="openGuide()" data-i18n-title="tip_guide" aria-label="User Guide">?</button>
+            <div class="header-title">
+                <h1 data-i18n="title_main">SSR – Décodeur de fautes</h1>
+                <div class="header-sub" data-i18n="title_sub">Sélecteur 99 positions</div>
+            </div>
+            <button class="header-icon" id="iconRef" type="button" onclick="openReference()" data-i18n-title="tip_reference" aria-label="Reference Guide">📖</button>
+        </div>
+
+
+        <div class="controls-bar">
+            <div class="controls-left">
+                <div class="mode-toggle">
+    <button class="mode-btn active" id="btnModeInput" onclick="setMode('input')" data-i18n="mode_quick">Saisie rapide</button>
+    <button class="mode-btn" id="btnModeTable" onclick="setMode('table')" data-i18n="mode_table">Table</button>
+</div>
+<button class="guide-button" onclick="openBulk()" data-i18n="btn_bulk">Coller lecture en lot</button>
+<button class="clear-button" onclick="clearAll()" data-i18n="btn_clear">Effacer tout</button>
+            </div>
+            <div class="diagnostic-section">
+                <div class="diagnostic-title" data-i18n="diag_title">Diagnostic</div>
+                <div class="diagnostic-panel">
+                    <div class="diagnostic-content" id="diagnosticContent">
+                        <div class="diagnostic-empty" data-i18n="diag_all_ok">Tous les systèmes sont OK</div>
+                    </div>
+                </div>
+            </div>
+            <div class="controls-right">
+    <button class="guide-button" id="langBtn" type="button" title="Language">🌐 <span id="langBadge">FR</span></button>
+</div>
+        </div>
+
+                <div class="mode-wrap">
+            <section id="inputMode" class="mode active">
+                <div class="cards" id="cardsContainer"></div>
+            </section>
+
+            <section id="tableMode" class="mode">
+                <div class="decoder-section">
+                            <div class="table-container">
+                                <table id="decoderTable">
+                                    <thead>
+                                        <tr>
+                                            <th class="position-col" data-i18n="th_pos">99</th>
+                                            <th class="hex-col" data-i18n="th_hex">HEX</th>
+                                            <th class="desc-col" data-i18n="th_desc">Description</th>
+                                            <th class="bit-col">Bit 7</th>
+                                            <th class="bit-col">Bit 6</th>
+                                            <th class="bit-col">Bit 5</th>
+                                            <th class="bit-col">Bit 4</th>
+                                            <th class="bit-col">Bit 3</th>
+                                            <th class="bit-col">Bit 2</th>
+                                            <th class="bit-col">Bit 1</th>
+                                            <th class="bit-col">Bit 0</th>
+                                            <th class="binary-col" data-i18n="th_bin">Binary Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="decoderBody">
+                                    </tbody>
+                                </table>
+                            </div>
+            </section>
+        </div>
+        </div>
+    </div>
+
+    <!-- Modal for User Guide -->
+    <div id="guideModal" class="modal">
+        <div class="modal-content">
+<div class="lang-fr">
+<h2 class="modal-header" data-i18n="guide_hdr">Guide d'utilisation</h2>
+<ul>
+    <li><strong>Colonne "99":</strong> Indique la position du commutateur 99 positions</li>
+    <li><strong>Colonne "HEX":</strong> Indication hexadécimale de l'état actuel de la position</li>
+    <li><strong>Colonne "Description":</strong> Description de l'indication</li>
+    <li><strong>Colonnes "Bit 7 à Bit 0":</strong> Statut de chaque position de bit</li>
+    <li><strong>Colonne "Binary Value":</strong> Représentation binaire de l'état actuel</li>
+</ul>
+
+<h3 style="color: #00ffff; margin-top: 20px; margin-bottom: 10px; font-size: 1.1em; border-bottom: 1px solid rgba(0, 255, 255, 0.3); padding-bottom: 5px;">📚 Sources</h3>
+<ul>
+    <li>Document <strong>5-10SSR-12/2</strong> - Annexe I</li>
+    <li><strong>RSE Livre 4, Volume 1, Section 5</strong> (Tableau 5-4)</li>
+</ul>
+
+<button class="close-modal" onclick="closeGuide()" data-i18n="btn_close">Fermer</button>
+</div>
+<div class="lang-en" style="display:none">
+<h2 class="modal-header" data-i18n="guide_hdr">User Guide</h2>
+<ul>
+    <li><strong>"99" column:</strong> Indicates the 99‑position switch position</li>
+    <li><strong>"HEX" column:</strong> Hexadecimal indication of the current position state</li>
+    <li><strong>"Description" column:</strong> Description of the indication</li>
+    <li><strong>"Bit 7 to Bit 0" columns:</strong> Status of each bit position</li>
+    <li><strong>"Binary Value" column:</strong> Binary representation of the current state</li>
+</ul>
+
+<h3 style="color: #00ffff; margin-top: 20px; margin-bottom: 10px; font-size: 1.1em; border-bottom: 1px solid rgba(0, 255, 255, 0.3); padding-bottom: 5px;">📚 Sources</h3>
+<ul>
+    <li>Document <strong>5-10SSR-12/2</strong> - Appendix I</li>
+    <li><strong>RSE Book 4, Volume 1, Section 5</strong> (Table 5‑4)</li>
+</ul>
+
+<button class="close-modal" onclick="closeGuide()" data-i18n="btn_close">Close</button>
+</div>
+</div>
+    </div>
+
+    <!-- Modal for Reference Guide --><div id="referenceModal" class="modal">
+        <div class="modal-content modal-content-wide">
+<div class="lang-fr">
+<h2 class="modal-header">Guide de référence - Sélecteur 99 positions</h2>
+            
+            <div class="reference-section">
+                <h3>1. PERFORMANCE RF & RÉCEPTION (01 - 10, 72-73)</h3>
+                <p class="section-note">Valeurs en décibels (dBW) ou niveaux relatifs.</p>
+                <table class="reference-table">
+                    <thead>
+                        <tr>
+                            <th>Pos</th>
+                            <th>Paramètre</th>
+                            <th>Valeur nominale</th>
+                            <th>Limites (alarme)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>01</td><td>Puiss. crête Somme (Σ) P1</td><td>30,5 dBW</td><td>30,0 - 31,0</td></tr>
+                        <tr><td>02</td><td>Puiss. crête Somme (Σ) P3</td><td>30,5 dBW</td><td>30,0 - 31,0</td></tr>
+                        <tr><td>03</td><td>Puiss. crête Contrôle (Ω) P2</td><td>28,5 dBW</td><td>28,0 - 29,0</td></tr>
+                        <tr><td>04</td><td>Puiss. crête Contrôle (Ω) P1</td><td>22,5 dBW</td><td>(Mode IISLS)</td></tr>
+                        <tr><td>05</td><td>ROS Somme (Σ)</td><td>&lt; 1,2:1</td><td>Max 1,5:1</td></tr>
+                        <tr><td>06</td><td>ROS Contrôle (Ω)</td><td>&lt; 1,2:1</td><td>Max 1,5:1</td></tr>
+                        <tr><td>07</td><td>Auto-essai Rx Somme</td><td>148</td><td>145 - 151</td></tr>
+                        <tr><td>08</td><td>Auto-essai Rx Différence</td><td>148</td><td>145 - 151</td></tr>
+                        <tr><td>09</td><td>Auto-essai Rx Contrôle</td><td>148</td><td>145 - 151</td></tr>
+                        <tr><td>10</td><td>Auto-essai Phase</td><td>000</td><td>Max 013</td></tr>
+                        <tr><td>72</td><td>Puiss. réfléchie Somme</td><td>Faible</td><td>&lt; 20,9 dBW</td></tr>
+                        <tr><td>73</td><td>Puiss. réfléchie Contrôle</td><td>Faible</td><td>&lt; 18,9 dBW</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="reference-section">
+                <h3>2. ALIMENTATIONS INTERROGATEUR (11 - 26)</h3>
+                <p class="section-note">Affichage souvent en hexadécimal. (Conversion approx. : 0F8 = 15.3 V)</p>
+                <table class="reference-table">
+                    <thead>
+                        <tr>
+                            <th>Pos (V)</th>
+                            <th>Tension</th>
+                            <th>Pos (I)</th>
+                            <th>Courant</th>
+                            <th>Nominale</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>11</td><td>+5 V</td><td>19</td><td>I (+50V)</td><td>4,7 - 5,3 V</td></tr>
+                        <tr><td>12</td><td>+15 V</td><td>20</td><td>I (+15V)</td><td>14 - 16 V</td></tr>
+                        <tr><td>13</td><td>+28 V</td><td>21</td><td>I (+28V)</td><td>26,5 - 29,5 V</td></tr>
+                        <tr><td>14</td><td>+50 V</td><td>22</td><td>I (+5V)</td><td>47,5 - 52,5 V</td></tr>
+                        <tr><td>15</td><td>+65 V</td><td>23</td><td>I (+65V)</td><td>62 - 68 V</td></tr>
+                        <tr><td>16</td><td>-5,2 V</td><td>24</td><td>I (-5,2V)</td><td>4,8 - 5,6 V</td></tr>
+                        <tr><td>17</td><td>-15 V</td><td>25</td><td>I (-15V)</td><td>14 - 16 V</td></tr>
+                        <tr><td>18</td><td>-70 V</td><td>26</td><td>I (-70V)</td><td>67 - 73 V</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="reference-section">
+                <h3>3. ALIMENTATIONS SMPE & ÉTAT SYSTÈME (27 - 40)</h3>
+                <ul class="compact-list">
+                    <li><strong>27 :</strong> Modes détectés (ex. : 03C pour Mode 3/A et C)</li>
+                    <li><strong>28 :</strong> Programme de Mode</li>
+                    <li><strong>29 :</strong> Fréquence de répétition (PRF) (ex. : 110 à 140 Hz)</li>
+                    <li><strong>30 :</strong> Test lampes (affiche 8.8.8)</li>
+                    <li><strong>32 / 33 :</strong> SMPE -12 V (canal local / opposé)</li>
+                    <li><strong>34 :</strong> +28 V (unité de permutation RF / RFCO)</li>
+                    <li><strong>35 :</strong> Tension de référence moniteur (nominale : 189)</li>
+                    <li><strong>36 :</strong> +5 V (autre interrogateur)</li>
+                    <li><strong>37 / 39 :</strong> SMPE +12 V (local / opposé)</li>
+                    <li><strong>38 / 40 :</strong> SMPE +5 V (local / opposé)</li>
+                </ul>
+            </div>
+
+            <div class="reference-section">
+                <h3>4. DIAGNOSTICS & PANNES (44 - 71)</h3>
+                <p class="section-note">Lecture hexadécimale. Convertir en binaire (8 bits : 7 6 5 4 3 2 1 0). 1 = PANNE.</p>
+                
+                <h4 style="color: #00d4ff; margin-top: 15px;">RX & SYSTÈME</h4>
+                <ul class="compact-list">
+                    <li><strong>44 (Rx Bruit/Mix) :</strong>
+                        <ul style="margin-left: 20px; margin-top: 5px;">
+                            <li>Bit 7, 6, 5 : Bruit (Σ, Δ, Ω)</li>
+                            <li>Bit 4, 3, 2 : Courant mélangeur faible</li>
+                        </ul>
+                    </li>
+                    <li><strong>46 (RFCO) :</strong> État de l'unité de permutation (Bit 7 = Sélect, 6 = Maint, 4 = OK)</li>
+                    <li><strong>54 (Rx Pannes) :</strong>
+                        <ul style="margin-left: 20px; margin-top: 5px;">
+                            <li>Bit 7 : Erreur signe (confiance)</li>
+                            <li>Bit 6 : Erreur axe de visée</li>
+                            <li>Bit 2, 1, 0 : Sensibilité basse (&gt; 6 dB)</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <h4 style="color: #00d4ff; margin-top: 15px;">TRANSMISSION (TX)</h4>
+                <ul class="compact-list">
+                    <li><strong>49 (Tx Pannes 1) :</strong>
+                        <ul style="margin-left: 20px; margin-top: 5px;">
+                            <li>Bit 7 : Panne sommaire</li>
+                            <li>Bit 2 : Limite régulateur HPA</li>
+                            <li>Bit 0 : Surchauffe &gt; 70 °C (coupure)</li>
+                        </ul>
+                    </li>
+                    <li><strong>50 (Tx Pannes 2) :</strong>
+                        <ul style="margin-left: 20px; margin-top: 5px;">
+                            <li>Bit 7/0 : Sortie HPA basse</li>
+                            <li>Bit 4 : PLL (boucle de phase) désaccrochée</li>
+                        </ul>
+                    </li>
+                    <li><strong>53 (Puissance) :</strong>
+                        <ul style="margin-left: 20px; margin-top: 5px;">
+                            <li>Bit 7/6 : ROS élevé (Ω/Σ)</li>
+                            <li>Bit 5/2 : Puissance P1/P3 basse (&gt; 3 dB)</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="reference-section">
+                <h3>5. COMMANDES SPÉCIALES</h3>
+                <ul class="compact-list">
+                    <li><strong>89 :</strong> Commande de transfert local (armement)</li>
+                    <li><strong>90 :</strong> Commande de transfert local (exécution - passer rapidement de 89 à 90)</li>
+                </ul>
+            </div>
+
+            <div class="reference-footer">
+                <p><strong>Références :</strong> Document 5-10SSR-12/2 (Annexe I) et RSE Livre 4, Volume 1, Section 5 (Tableau 5-4)</p>
+            </div>
+            
+            <button class="close-modal" onclick="closeReference()" data-i18n="btn_close">Fermer</button>
+</div>
+<div class="lang-en" style="display:none">
+<h2 class="modal-header">Reference Guide – 99‑Position Selector</h2>
+
+<div class="reference-section">
+  <h3>1. RF PERFORMANCE & RECEIVER (01–10, 72–73)</h3>
+  <p class="section-note">Values in decibels (dBW) or relative levels.</p>
+  <table class="reference-table">
+    <thead>
+      <tr>
+        <th>Pos</th>
+        <th>Parameter</th>
+        <th>Nominal</th>
+        <th>Limits (alarm)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>01</td><td>Sum peak power (Σ) P1</td><td>30.5 dBW</td><td>30.0 – 31.0</td></tr>
+      <tr><td>02</td><td>Sum peak power (Σ) P3</td><td>30.5 dBW</td><td>30.0 – 31.0</td></tr>
+      <tr><td>03</td><td>Control peak power (Ω) P2</td><td>28.5 dBW</td><td>28.0 – 29.0</td></tr>
+      <tr><td>04</td><td>Control peak power (Ω) P1</td><td>22.5 dBW</td><td>(IISLS mode)</td></tr>
+      <tr><td>05</td><td>Sum (Σ) VSWR</td><td>&lt; 1.2:1</td><td>Max 1.5:1</td></tr>
+      <tr><td>06</td><td>Control (Ω) VSWR</td><td>&lt; 1.2:1</td><td>Max 1.5:1</td></tr>
+      <tr><td>07</td><td>Sum Rx self‑test</td><td>148</td><td>145 – 151</td></tr>
+      <tr><td>08</td><td>Difference Rx self‑test</td><td>148</td><td>145 – 151</td></tr>
+      <tr><td>09</td><td>Control Rx self‑test</td><td>148</td><td>145 – 151</td></tr>
+      <tr><td>10</td><td>Phase self‑test</td><td>000</td><td>Max 013</td></tr>
+      <tr><td>72</td><td>Sum reflected power</td><td>Low</td><td>&lt; 20.9 dBW</td></tr>
+      <tr><td>73</td><td>Control reflected power</td><td>Low</td><td>&lt; 18.9 dBW</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="reference-section">
+  <h3>2. INTERROGATOR POWER SUPPLIES (11–26)</h3>
+  <p class="section-note">Display is often hexadecimal. (Approx. conversion: 0F8 ≈ 15.3 V)</p>
+  <table class="reference-table">
+    <thead>
+      <tr>
+        <th>Pos (V)</th>
+        <th>Voltage</th>
+        <th>Pos (I)</th>
+        <th>Current</th>
+        <th>Nominal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>11</td><td>+5 V</td><td>19</td><td>I (+50V)</td><td>4.7 – 5.3 V</td></tr>
+      <tr><td>12</td><td>+15 V</td><td>20</td><td>I (+15V)</td><td>14 – 16 V</td></tr>
+      <tr><td>13</td><td>+28 V</td><td>21</td><td>I (+28V)</td><td>26.5 – 29.5 V</td></tr>
+      <tr><td>14</td><td>+50 V</td><td>22</td><td>I (+5V)</td><td>47.5 – 52.5 V</td></tr>
+      <tr><td>15</td><td>+65 V</td><td>23</td><td>I (+65V)</td><td>62 – 68 V</td></tr>
+      <tr><td>16</td><td>-5.2 V</td><td>24</td><td>I (-5.2V)</td><td>4.8 – 5.6 V</td></tr>
+      <tr><td>17</td><td>-15 V</td><td>25</td><td>I (-15V)</td><td>14 – 16 V</td></tr>
+      <tr><td>18</td><td>-70 V</td><td>26</td><td>I (-70V)</td><td>67 – 73 V</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="reference-section">
+  <h3>3. SMPE SUPPLIES & SYSTEM STATUS (27–40)</h3>
+  <ul class="compact-list">
+    <li><strong>27:</strong> Detected modes (e.g., 03C for Mode 3/A and C)</li>
+    <li><strong>28:</strong> Mode program</li>
+    <li><strong>29:</strong> Pulse repetition frequency (PRF) (e.g., 110 to 140 Hz)</li>
+    <li><strong>30:</strong> Lamp test (displays 8.8.8)</li>
+    <li><strong>32 / 33:</strong> SMPE −12 V (local / opposite)</li>
+    <li><strong>34:</strong> +28 V (RF switch unit / RFCO)</li>
+    <li><strong>35:</strong> Monitor reference voltage (nominal: 189)</li>
+    <li><strong>36:</strong> +5 V (other interrogator)</li>
+    <li><strong>37 / 39:</strong> SMPE +12 V (local / opposite)</li>
+    <li><strong>38 / 40:</strong> SMPE +5 V (local / opposite)</li>
+  </ul>
+</div>
+
+<div class="reference-section">
+  <h3>4. DIAGNOSTICS & FAULTS (44–71)</h3>
+  <p class="section-note">Hex reading. Convert to binary (8 bits: 7 6 5 4 3 2 1 0). 1 = FAULT.</p>
+
+  <h4 style="color: #00d4ff; margin-top: 15px;">RX & SYSTEM</h4>
+  <ul class="compact-list">
+    <li><strong>44 (Rx Noise/Mixer):</strong>
+      <ul style="margin-left: 20px; margin-top: 5px;">
+        <li>Bits 7, 6, 5: Noise (Σ, Δ, Ω)</li>
+        <li>Bits 4, 3, 2: Mixer current low</li>
+      </ul>
+    </li>
+    <li><strong>46 (RFCO):</strong> Switch unit status (Bit 7 = Select, 6 = Maint, 4 = OK)</li>
+    <li><strong>54 (Rx Faults):</strong>
+      <ul style="margin-left: 20px; margin-top: 5px;">
+        <li>Bit 7: Sign error (confidence)</li>
+        <li>Bit 6: Boresight error</li>
+        <li>Bits 2, 1, 0: Low sensitivity (&gt; 6 dB)</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h4 style="color: #00d4ff; margin-top: 15px;">TRANSMITTER (TX)</h4>
+  <ul class="compact-list">
+    <li><strong>49 (Tx Faults 1):</strong>
+      <ul style="margin-left: 20px; margin-top: 5px;">
+        <li>Bit 7: Summary fault</li>
+        <li>Bit 2: HPA regulator limit</li>
+        <li>Bit 0: Over‑temperature &gt; 70 °C (shutdown)</li>
+      </ul>
+    </li>
+    <li><strong>50 (Tx Faults 2):</strong>
+      <ul style="margin-left: 20px; margin-top: 5px;">
+        <li>Bits 7/0: HPA output low</li>
+        <li>Bit 4: PLL out of lock</li>
+      </ul>
+    </li>
+    <li><strong>53 (Power):</strong>
+      <ul style="margin-left: 20px; margin-top: 5px;">
+        <li>Bits 7/6: High VSWR (Ω/Σ)</li>
+        <li>Bits 5/2: Low P1/P3 power (&gt; 3 dB)</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<div class="reference-section">
+  <h3>5. SPECIAL COMMANDS</h3>
+  <ul class="compact-list">
+    <li><strong>89:</strong> Local transfer command (arm)</li>
+    <li><strong>90:</strong> Local transfer command (execute – move quickly from 89 to 90)</li>
+  </ul>
+</div>
+
+<div class="reference-footer">
+  <p><strong>References:</strong> Document 5‑10SSR‑12/2 (Appendix I) and RSE Book 4, Volume 1, Section 5 (Table 5‑4)</p>
+</div>
+
+<button class="close-modal" onclick="closeReference()">Close</button>
+</div>
+</div>
+    </div>
+
+    <!-- Modal for Bulk Paste -->
+    <div id="bulkModal" class="modal">
+        <div class="modal-content">
+<div class="lang-fr">
+<h2 class="modal-header" data-i18n="bulk_hdr">📥 Coller lecture (saisie en lot)</h2>
+<p style="color:#8bb9d9; font-size:0.9em; line-height:1.5; text-align:center; margin-bottom:12px;" data-i18n="bulk_help">
+  Colle des valeurs HEX (00..FF) en colonne, ou des paires du type <strong>46=F4</strong>. Les positions reconnues: 44 à 71.
+</p>
+<textarea class="bulk" id="bulkText_en" data-i18n-placeholder="bulk_ph" placeholder="Exemples:
+00
+0A
+F4
+...
+
+ou
+
+44=00 45=0A 46=F4 47=00 ..."></textarea>
+<div class="modal-actions">
+  <button class="close-modal action-btn" onclick="applyBulk()" data-i18n="btn_apply">Appliquer</button>
+  <button class="close-modal action-btn" onclick="closeBulk()" data-i18n="btn_close">Fermer</button>
+</div>
+</div>
+<div class="lang-en" style="display:none">
+<h2 class="modal-header" data-i18n="bulk_hdr">📥 Bulk paste</h2>
+<p style="color:#8bb9d9; font-size:0.9em; line-height:1.5; text-align:center; margin-bottom:12px;" data-i18n="bulk_help">
+  Paste HEX values (00..FF) one per line, or pairs like <strong>46=F4</strong>. Recognized positions: 44 to 71.
+</p>
+<textarea class="bulk" id="bulkText" data-i18n-placeholder="bulk_ph" placeholder="Examples:
+00
+0A
+F4
+...
+
+or
+
+44=00 45=0A 46=F4 47=00 ..."></textarea>
+<div class="modal-actions">
+  <button class="close-modal action-btn" onclick="applyBulk()" data-i18n="btn_apply">Apply</button>
+  <button class="close-modal action-btn" onclick="closeBulk()" data-i18n="btn_close">Close</button>
+</div>
+</div>
+</div>
+        </div>
+    </div>
+
+    <script>
+        
+        /* ======================
+           i18n (FR/EN only)
+           Safe: display-only
+           ====================== */
+        const I18N_UI = {
+          fr: {
+            title_main: "SSR – Décodeur de fautes",
+            title_sub: "Sélecteur 99 positions",
+            mode_quick: "Saisie rapide",
+            mode_table: "Table",
+            btn_guide: "Guide d'utilisation",
+            btn_reference: "Guide de référence",
+
+            btn_clear: "Effacer tout",
+            btn_bulk: "Coller lecture en lot",
+            tip_guide: "Guide d\'utilisation",
+            tip_reference: "Guide de référence",
+            diag_title: "Diagnostic",
+            diag_all_ok: "Tous les systèmes sont OK",
+            th_pos: "99",
+            th_hex: "HEX",
+            th_desc: "Description",
+            th_bin: "Valeur binaire",
+            guide_hdr: "Guide d'utilisation",
+            bulk_hdr: "📥 Coller lecture en lot",
+            bulk_help: "Colle des valeurs HEX (00..FF) en colonne, ou des paires du type 46=F4. Les positions reconnues: 44 à 71.",
+            bulk_ph: `Exemples:
+00
+0A
+F4
+...
+
+ou
+
+44=00 45=0A 46=F4 47=00 ...`,
+            btn_close: "Fermer",
+            btn_apply: "Appliquer",
+            lang_badge: "FR"
+          },
+          en: {
+            title_main: "SSR – Fault Decoder",
+            title_sub: "99 Position Selector",
+            mode_quick: "Quick input",
+            mode_table: "Table",
+            btn_guide: "User Guide",
+            btn_reference: "Reference Guide",
+
+            btn_clear: "Clear all",
+            btn_bulk: "Bulk paste (batch)",
+            tip_guide: "User Guide",
+            tip_reference: "Reference Guide",
+            diag_title: "Diagnostics",
+            diag_all_ok: "All systems OK",
+            th_pos: "99",
+            th_hex: "HEX",
+            th_desc: "Description",
+            th_bin: "Binary value",
+            guide_hdr: "User Guide",
+            bulk_hdr: "📥 Bulk paste (batch)",
+            bulk_help: "Paste HEX values (00..FF) one per line, or pairs like 46=F4. Recognized positions: 44 to 71.",
+            bulk_ph: `Examples:
+00
+0A
+F4
+...
+
+or
+
+44=00 45=0A 46=F4 47=00 ...`,
+            btn_close: "Close",
+            btn_apply: "Apply",
+            lang_badge: "EN"
+          }
+        };
+
+        const LANG_KEY_UI = "ssr99_lang";
+        let langUI = localStorage.getItem(LANG_KEY_UI) || "fr";
+
+        function tUI(key){
+          return (I18N_UI[langUI] && I18N_UI[langUI][key]) || key;
+        }
+
+        function renderUIStrings(){
+          // badge
+          const badge = document.getElementById("langBadge");
+          if(badge) badge.textContent = (langUI === "fr") ? "EN" : "FR";
+
+          // data-i18n text nodes
+          document.querySelectorAll("[data-i18n]").forEach(el=>{
+            const k = el.getAttribute("data-i18n");
+            el.textContent = tUI(k);
+          });
+
+          // placeholders
+          document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
+            const k = el.getAttribute("data-i18n-placeholder");
+            el.setAttribute("placeholder", tUI(k));
+          });
+
+          // modal language blocks
+          document.querySelectorAll(".lang-fr").forEach(el=>{
+            el.style.display = (langUI === "fr") ? "" : "none";
+          });
+          document.querySelectorAll(".lang-en").forEach(el=>{
+            el.style.display = (langUI === "en") ? "" : "none";
+          });
+
+          // doc title
+          document.title = tUI("title_main");
+        }
+
+        function toggleLangUI(){
+          langUI = (langUI === "fr") ? "en" : "fr";
+          localStorage.setItem(LANG_KEY_UI, langUI);
+          renderUIStrings();
+
+          // refresh diagnostic to match current language (if function exists)
+          if(typeof updateDiagnostic === "function"){
+            try{ updateDiagnostic(); }catch(e){}
+          }
+        }
+
+        document.addEventListener("DOMContentLoaded", ()=>{
+          const b = document.getElementById("langBtn");
+          if(b) b.addEventListener("click", toggleLangUI);
+          renderUIStrings();
+        });
+// ============================
+        // DATA
+        // ============================
+        const decoderData = [
+            {
+                pos: 44,
+                hex: '0',
+                desc: 'RX Mixer',
+                bits: [
+                    {ok: 'RX OK', fault: 'Sum Noise_FAULT'},
+                    {ok: 'RX OK', fault: 'Diff Noise_FAULT'},
+                    {ok: 'RX OK', fault: 'Control Noise_FAULT'},
+                    {ok: 'RX OK', fault: 'Sum mixer current low'},
+                    {ok: 'RX OK', fault: 'diff mixer current low'},
+                    {ok: 'RX OK', fault: 'control mixer curent low'},
+                    {ok: 'RX OK', fault: 'spare'},
+                    {ok: 'RX OK', fault: 'Spare'}
+                ]
+            },
+            {
+                pos: 45,
+                hex: '0',
+                desc: 'RX warning',
+                bits: [
+                    {ok: 'RX OK', fault: 'Diff 3db High'},
+                    {ok: 'RX OK', fault: 'Control 3dB high'},
+                    {ok: 'RX OK', fault: 'Sum 3db high'},
+                    {ok: 'RX OK', fault: 'Diff 3db low'},
+                    {ok: 'RX OK', fault: 'Control 3db low'},
+                    {ok: 'RX OK', fault: 'Sum 3dB low'},
+                    {ok: 'Phase OK', fault: 'Phase Fault'},
+                    {ok: 'RX OK', fault: 'spare'}
+                ]
+            },
+            {
+                pos: 46,
+                hex: 'F4',
+                desc: 'RFCO',
+                bits: [
+                    {ok: 'Redundant', fault: 'Selected'},
+                    {ok: 'Maint', fault: 'Available'},
+                    {ok: 'Video Data Error', fault: 'Video Data OK'},
+                    {ok: 'Failed', fault: 'Serviceable'},
+                    {ok: 'Opposite INT Redundant', fault: 'Opposite INT Selected'},
+                    {ok: 'Opp INT Maint', fault: 'Opp INT Available'},
+                    {ok: 'Opposite ch. Video Data OK', fault: 'Opposite ch. Video Data error'},
+                    {ok: 'Opposite Ch. Serviceable', fault: 'Opposite CH Failed'}
+                ]
+            },
+            {
+                pos: 47,
+                hex: '0',
+                desc: 'SMPE',
+                bits: [
+                    {ok: 'SMPE OK', fault: 'SMPE failed'},
+                    {ok: 'Available', fault: 'Maint'},
+                    {ok: 'Video OK', fault: 'INT video faulty'},
+                    {ok: 'Local control from SPU2 disabled', fault: 'Local control from SPU2 is Enabled'},
+                    {ok: 'Opposite PE serviceable', fault: 'Opposite PE Failed'},
+                    {ok: 'Opposite SMPE avail', fault: 'Opposite SMPE Maint'},
+                    {ok: 'Opposite INT video OK', fault: 'Opposite INT video Faulty'},
+                    {ok: 'Local Control from SPU1 disabled', fault: 'Local control from SPU1 Enabled'}
+                ]
+            },
+            {
+                pos: 48,
+                hex: 'F8',
+                desc: 'RX TX status',
+                bits: [
+                    {ok: 'Sum Video Fault', fault: 'Sum video OK'},
+                    {ok: 'RX Sidelobe suppression Fault', fault: 'RX Sidelobe suppression OK'},
+                    {ok: 'Sign Bit 1 FAULT', fault: 'Sign Bit 1 OK'},
+                    {ok: 'Sign Bit 2 FAULT', fault: 'Sign Bit 2 OK'},
+                    {ok: '28v RFCO Fault', fault: '28v RFCO OK'},
+                    {ok: 'N/A', fault: 'N/A'},
+                    {ok: 'TX Safe', fault: 'TX NOT SAFE'},
+                    {ok: 'P1 control detected', fault: 'P1 Control NOT detected'}
+                ]
+            },
+            {
+                pos: 49,
+                hex: '07',
+                desc: 'TX status',
+                bits: [
+                    {ok: 'TX OK', fault: 'TX FAULT'},
+                    {ok: 'SUM Modulator OK', fault: 'Sum Modulator overload'},
+                    {ok: 'Control Modulator OK', fault: 'Control Modulator overload'},
+                    {ok: 'Sum internal load selected', fault: 'Sum Internal Load not selected'},
+                    {ok: 'Control Internal load selected', fault: 'Ctrl internal load NOT selected'},
+                    {ok: 'HPA Regulator Limit Fault', fault: 'HPA regulator limit OK'},
+                    {ok: 'TX over Temp Warning', fault: 'TX over temp OK'},
+                    {ok: 'TX over temp FAULT', fault: 'TX over temp OK'}
+                ]
+            },
+            {
+                pos: 50,
+                hex: '0',
+                desc: 'TX status',
+                bits: [
+                    {ok: 'SUM HPA O/P OK', fault: 'SUM HPA O/P LOW'},
+                    {ok: 'SUM HPA regulator OK', fault: 'Sum HPA regulator overload FAULT'},
+                    {ok: 'Sum Driver O/P OK', fault: 'Sum Driver O/P LOW FAULT'},
+                    {ok: 'Phase Lock Loop OK', fault: 'Phase Lock Loop FAULT'},
+                    {ok: 'Driver Modulator Overload OK', fault: 'Driver Modulator Overload FAULT'},
+                    {ok: 'Control Driver O/P OK', fault: 'Control Driver O/P LOW'},
+                    {ok: 'Control HPA Regulator OK', fault: 'Control HPA regulator Overload FAULT'},
+                    {ok: 'Control HPA O/P OK', fault: 'Control HPA O/P LOW'}
+                ]
+            },
+            {
+                pos: 51,
+                hex: '0',
+                desc: 'SMPE power supply',
+                bits: [
+                    {ok: 'SMPE -12v OK', fault: 'SMPE -12v FAULT'},
+                    {ok: 'Opposite SMPE -12v OK', fault: 'Opposite SMPE -12v FAULT'},
+                    {ok: 'RFCO +28v OK', fault: 'RFCO +28v FAULT'},
+                    {ok: 'Opposite INT +5v OK', fault: 'Opposite INT +5v FAULT'},
+                    {ok: 'SMPE +12v OK', fault: 'SMPE +12v FAULT'},
+                    {ok: 'SMPE +5v OK', fault: 'SMPE +5v FAULT'},
+                    {ok: 'Opposite SMPE +12v OK', fault: 'Opposite SMPE +12v FAULT'},
+                    {ok: 'Opposite SMPE +5v OK', fault: 'Opposite SMPE +5v FAULT'}
+                ]
+            },
+            {
+                pos: 52,
+                hex: '0',
+                desc: 'INT power supply',
+                bits: [
+                    {ok: '+5v OK', fault: '+5v FAULT'},
+                    {ok: '+15v OK', fault: '+15v FAULT'},
+                    {ok: '+28v OK', fault: '+28v FAULT'},
+                    {ok: '+50v OK', fault: '+50v FAULT'},
+                    {ok: '+65v OK', fault: '+65v FAULT'},
+                    {ok: '-5.2v OK', fault: '-5.2v FAULT'},
+                    {ok: '-15v OK', fault: '-15v FAULT'},
+                    {ok: '-70v OK', fault: '-70v FAULT'}
+                ]
+            },
+            {
+                pos: 53,
+                hex: '0',
+                desc: 'Transmitter pulse',
+                bits: [
+                    {ok: 'Control Rev Pwr OK', fault: 'Control Rev Pwr FAULT'},
+                    {ok: 'Sum Rev Pwr OK', fault: 'Sum Rev Pwr FAULT'},
+                    {ok: 'Control P1 Pwr OK', fault: 'Control P1 3dB FAULT'},
+                    {ok: 'Control P2 OK', fault: 'Control P2 3dB FAULT'},
+                    {ok: 'Control P2 OK', fault: 'Control P2 2dB Warning'},
+                    {ok: 'Sum P3 OK', fault: 'Sum P3 3dB Pwr FAULT'},
+                    {ok: 'Sum P3 2dB OK', fault: 'Sum P3 2dB Pwr FAULT'},
+                    {ok: 'Sum P1-P3 1dB Pwr OK', fault: 'Sum P1-P3 1dB Pwr FAULT'}
+                ]
+            },
+            {
+                pos: 54,
+                hex: '0',
+                desc: 'Receiver fault',
+                bits: [
+                    {ok: 'Sign 2 confidence OK', fault: 'Sign 2 confidence FAULT'},
+                    {ok: 'Sign 1 Boresight OK', fault: 'Sign 1 Boresight FAULT'},
+                    {ok: 'Processed Sum Video OK', fault: 'Processed Sum Video FAULT'},
+                    {ok: 'RX sidelobe suppression OK', fault: 'RX sidelobe suppression FAULT'},
+                    {ok: 'OK', fault: 'Spare'},
+                    {ok: 'Sum RX 6dB OK', fault: 'Sum RX 6dB FAULT (low)'},
+                    {ok: 'Diff RX OK', fault: 'Diff RX 6dB Low (FAULT)'},
+                    {ok: 'Control RX OK', fault: 'Control RX 6dB FAULT (low)'}
+                ]
+            },
+            {
+                pos: 55,
+                hex: '0',
+                desc: 'Last received cmd',
+                bits: [
+                    {ok: '', fault: 'N/A'},
+                    {ok: '', fault: 'N/A'},
+                    {ok: '', fault: 'APM command'},
+                    {ok: '', fault: 'TX command'},
+                    {ok: '', fault: 'RF command'},
+                    {ok: '', fault: 'Mode Program Bit 2 command'},
+                    {ok: '', fault: 'Mode Program bit 1'},
+                    {ok: '', fault: 'Mode Program bit 0'}
+                ]
+            },
+            {
+                pos: 56,
+                hex: '0',
+                desc: 'Last received cmd',
+                bits: [
+                    {ok: '', fault: 'Role command change'},
+                    {ok: '', fault: 'Swap interrogator'},
+                    {ok: '', fault: 'PRF Control Bit 1'},
+                    {ok: '', fault: 'PRF control Bit 0'},
+                    {ok: '', fault: 'GTC Control Bit 1'},
+                    {ok: '', fault: 'GTC Control Bit 0'},
+                    {ok: '', fault: 'Sidelobe Suppression'},
+                    {ok: '', fault: 'Auto Changeover'}
+                ]
+            },
+            {
+                pos: 57,
+                hex: '0',
+                desc: 'Control readback',
+                bits: [
+                    {ok: '', fault: 'Sum Noise_FAULT'},
+                    {ok: '', fault: 'Sum Noise_FAULT'},
+                    {ok: '', fault: 'Sum Noise_FAULT'},
+                    {ok: '', fault: 'Sum Noise_FAULT'},
+                    {ok: '', fault: 'RF command'},
+                    {ok: '', fault: 'Sum Noise_FAULT'},
+                    {ok: '', fault: 'Sum Noise_FAULT'},
+                    {ok: '', fault: 'Sum Noise_FAULT'}
+                ]
+            },
+            {
+                pos: 58,
+                hex: '0',
+                desc: 'Control readback',
+                bits: [
+                    {ok: '', fault: 'Role Change'},
+                    {ok: '', fault: 'Swap Int readback'},
+                    {ok: '', fault: 'PRF Control Bit 1'},
+                    {ok: '', fault: 'PRF Control Bit 0'},
+                    {ok: '', fault: 'GTC Control Bit 1'},
+                    {ok: '', fault: 'GTC control Bit 0'},
+                    {ok: '', fault: 'SideLobe Suppression readback'},
+                    {ok: '', fault: 'Auto Changeover readback'}
+                ]
+            },
+            {
+                pos: 59,
+                hex: '28',
+                desc: 'Level 1 status',
+                bits: [
+                    {ok: '', fault: 'MSB of ANT Turning data'},
+                    {ok: '', fault: 'MSB -1 of ANT Turning data'},
+                    {ok: 'SMPE Failed', fault: 'SMPE serviceable'},
+                    {ok: 'SMPE Available (online)', fault: 'SMPE in Maint'},
+                    {ok: 'Opp SMPE FAILED', fault: 'Opp SMPE Serviceable'},
+                    {ok: 'Opposite SMPE Available', fault: 'Opposite SMPE in Maint'},
+                    {ok: 'RX OK', fault: 'Sum Noise_FAULT'},
+                    {ok: 'RX OK', fault: 'Sum Noise_FAULT'}
+                ]
+            },
+            {
+                pos: 60,
+                hex: 'B3',
+                desc: 'Level 1 status INT',
+                bits: [
+                    {ok: 'Redundant (STBY)', fault: 'Selected (online)'},
+                    {ok: 'Available', fault: 'Maint'},
+                    {ok: 'Video Data Error', fault: 'Video Data OK'},
+                    {ok: 'Failed', fault: 'Serviceable'},
+                    {ok: 'Opp INT Redundant (STBY)', fault: 'Opp INT Selected'},
+                    {ok: 'Opp INT Available', fault: 'Opp INT in MAINT'},
+                    {ok: 'Opp INT Video Data in ERROR', fault: 'Opp INT Video Data OK'},
+                    {ok: 'Opp INT Failed', fault: 'Opp INT OK'}
+                ]
+            },
+            {
+                pos: 61,
+                hex: '1',
+                desc: 'Level 2 status',
+                bits: [
+                    {ok: 'RF Interlock Disabled', fault: 'RF Interlock'},
+                    {ok: 'Sum Ch to Dummy Load', fault: 'Sum Channel to Ant'},
+                    {ok: 'Diff Ch to Dummy Load', fault: 'Diff Ch to Ant'},
+                    {ok: 'Control Ch to Dummy Load', fault: 'Control ch to Ant'},
+                    {ok: 'Opp INT Transmitting', fault: 'Opp INT TX Inhibited'},
+                    {ok: 'Opp INT Failed', fault: 'Opp INT Serviceable'},
+                    {ok: 'Opp INT Maint', fault: 'Opp INT Available'},
+                    {ok: 'Opp INT STBY', fault: 'Opp INT Selected'}
+                ]
+            },
+            {
+                pos: 62,
+                hex: '0',
+                desc: 'Level 2 status/requests',
+                bits: [
+                    {ok: '', fault: ''},
+                    {ok: '', fault: 'APM in Progress'},
+                    {ok: '', fault: '+50v Inhibited'},
+                    {ok: '', fault: 'Opp ch Local Control request'},
+                    {ok: 'PRF OK', fault: 'PRF out of limits FAULT'},
+                    {ok: 'TX safe', fault: 'TX NOT safe'},
+                    {ok: '', fault: 'TX inhibit due to changeover'},
+                    {ok: 'Local Control no request', fault: 'Local Control Request'}
+                ]
+            },
+            {
+                pos: 63,
+                hex: '0',
+                desc: 'Level 2 status',
+                bits: [
+                    {ok: 'Sum HPA output OK', fault: 'Sum HPA output low (FAULT)'},
+                    {ok: 'SUM HPA OK', fault: 'SUM HPA Regulator overload FAULT'},
+                    {ok: 'Sum driver OK', fault: 'Sum Driver outut Low (FAULT)'},
+                    {ok: 'PLL OK', fault: 'PLL FAULT'},
+                    {ok: 'Driver modulator OK', fault: 'Driver modulator overload (FAULT)'},
+                    {ok: 'CTRL driver OK', fault: 'Control Driver O/P Low FAULT'},
+                    {ok: 'Control HPA regulator OK', fault: 'Control HPA regulator overload FAULT'},
+                    {ok: 'Control HPA O/P OK', fault: 'Control HPA O/P Low FAULT'}
+                ]
+            },
+            {
+                pos: 64,
+                hex: '14',
+                desc: 'Mode selected',
+                bits: [
+                    {ok: '', fault: ''},
+                    {ok: '', fault: ''},
+                    {ok: '', fault: 'MODE D'},
+                    {ok: 'FAULT', fault: 'Mode C'},
+                    {ok: '', fault: 'Mode B'},
+                    {ok: 'FAULT', fault: 'Mode 3/A'},
+                    {ok: '', fault: 'Mode 2'},
+                    {ok: '', fault: 'Mode 1'}
+                ]
+            },
+            {
+                pos: 65,
+                hex: '0',
+                desc: 'Level 2 status TX',
+                bits: [
+                    {ok: 'TX summary OK', fault: 'Transmitter FAULT'},
+                    {ok: '', fault: 'Sum modulator overload FAULT'},
+                    {ok: '', fault: 'Control Modulator overload FAULT'},
+                    {ok: 'Sum internal load normal', fault: 'Sum internal load selected'},
+                    {ok: 'control Internal load normal', fault: 'control Internal load selected'},
+                    {ok: 'HPA regulator limit OK', fault: 'HPA regulator limit FAULT'},
+                    {ok: 'temp ok', fault: 'Transmitter over temp warning'},
+                    {ok: 'TX overtemp ok', fault: 'Transmitter over temp FAULT'}
+                ]
+            },
+            {
+                pos: 66,
+                hex: '0',
+                desc: 'Level 2 status TX',
+                bits: [
+                    {ok: 'Control VSWR OK', fault: 'Control rev power High VSWR FAULT'},
+                    {ok: 'Sum VSWR OK', fault: 'Sum VSWR FAULT'},
+                    {ok: 'Control P1 3dB ok', fault: 'control P1 3dB FAULT'},
+                    {ok: 'Control P2 3dB ok', fault: 'Control P2 3dB FAULT'},
+                    {ok: 'Control P2 Power 2db OK', fault: 'Control P2 Power 2db FAULT'},
+                    {ok: 'Sum P3 Power 3dB ok', fault: 'Sum P3 Power 3dB FAULT'},
+                    {ok: 'Sum P3 Power 2dB OK', fault: 'Sum P3 Power 2dB warning'},
+                    {ok: 'sum P1 - P3 Power 1dB OK', fault: 'sum P1 - P3 Power 1dB warning'}
+                ]
+            },
+            {
+                pos: 67,
+                hex: '0',
+                desc: 'Level 2 status RX',
+                bits: [
+                    {ok: 'Sign 2 (confidence) OK', fault: 'Sign 2 (confidence) FAULT'},
+                    {ok: 'Sign 1 (Boresight) OK', fault: 'Sign 1 (Boresight) FAULT'},
+                    {ok: 'Processed Sum video OK', fault: 'Processed Sum video FAULT'},
+                    {ok: 'RX Sidelobe suppression OK', fault: 'RX Sidelobe suppression FAULT'},
+                    {ok: '', fault: ''},
+                    {ok: 'Sum RX 6dB OK', fault: 'Sum RX 6dB FAULT'},
+                    {ok: 'Diff RX 6dB OK', fault: 'Diff RX 6dB FAULT'},
+                    {ok: 'Control RX 6dB OK', fault: 'Control RX 6dB FAULT'}
+                ]
+            },
+            {
+                pos: 68,
+                hex: '0',
+                desc: 'Level 2 status RX',
+                bits: [
+                    {ok: 'Sum RX noise OK', fault: 'Sum RX Noise_FAULT'},
+                    {ok: 'Diff RX noise OK', fault: 'Diff RX noise FAULT'},
+                    {ok: 'Control RX noise OK', fault: 'Control RX noiseFAULT'},
+                    {ok: 'Sum RX mixer current OK', fault: 'Sum RX mixer current LOW (FAULT)'},
+                    {ok: 'Diff RX mixer current OK', fault: 'Diff RX mixer current FAULT'},
+                    {ok: 'Ctrl RX mixer current OK', fault: 'control RX mixer current FAULT'},
+                    {ok: 'RX OK', fault: ''},
+                    {ok: 'RX OK', fault: 'Sum Noise_FAULT'}
+                ]
+            },
+            {
+                pos: 69,
+                hex: '0',
+                desc: 'Level 2 status',
+                bits: [
+                    {ok: 'Diff RX 3dB OK', fault: 'Diff RX 3dB high FAULT'},
+                    {ok: 'Control RX 3dB OK', fault: 'Control RX 3dB high FAULT'},
+                    {ok: 'Sum RX 3dB OK', fault: 'Sum RX 3dB High FAULT'},
+                    {ok: 'Diff RX 3dB low OK', fault: 'Diff RX 3dB low FAULT'},
+                    {ok: 'Control RX 3dB low OK', fault: 'Control RX 3dB low FAULT'},
+                    {ok: 'Sum RX 3dB low OK', fault: 'Sum RX 3dB low FAULT'},
+                    {ok: 'Phase OK', fault: 'Phase FAULT'},
+                    {ok: 'RX OK', fault: ''}
+                ]
+            },
+            {
+                pos: 70,
+                hex: '0',
+                desc: 'Level 2 INT P/S',
+                bits: [
+                    {ok: '+5v OK', fault: '+5v FAULT'},
+                    {ok: '+15v OK', fault: '+15v FAULT'},
+                    {ok: '+28v OK', fault: '+28v FAULT'},
+                    {ok: '+50v OK', fault: '+50v FAULT'},
+                    {ok: '+65v OK', fault: '+65v FAULT'},
+                    {ok: '-5.2v OK', fault: '-5.2v FAULT'},
+                    {ok: '-15v OK', fault: '-15v FAULT'},
+                    {ok: '-70v OK', fault: '-70v FAULT'}
+                ]
+            },
+            {
+                pos: 71,
+                hex: '0',
+                desc: 'Level 2 SMPE Byte 10',
+                bits: [
+                    {ok: 'SMPE -12v OK', fault: 'SMPE -12v FAULT'},
+                    {ok: 'Opposite SMPE -12v OK', fault: 'Opposite SMPE -12v FAULT'},
+                    {ok: 'RFCO +28v OK', fault: 'RFCO +28v FAULT'},
+                    {ok: 'Opposite INT +5v OK', fault: 'Opposite INT +5v FAULT'},
+                    {ok: 'SMPE +12v OK', fault: 'SMPE +12v FAULT'},
+                    {ok: 'SMPE +5v OK', fault: 'SMPE +5v FAULT'},
+                    {ok: 'Opposite SMPE +12v OK', fault: 'Opposite SMPE +12v FAULT'},
+                    {ok: 'Opposite SMPE +5v OK', fault: 'Opposite SMPE +5v FAULT'}
+                ]
+            }
+        ];
+
+
+        // Canonical state (single source of truth)
+        const stateHex = Object.create(null);
+        const posList = decoderData.map(d => d.pos).sort((a,b)=>a-b);
+
+        // Active input tracking for keypad/nav
+        let activePos = posList[0];
+
+        function clampHexToByte(value){
+            const v = (value || '').toUpperCase().replace(/[^0-9A-F]/g,'');
+            if (!v) return '00';
+            const num = parseInt(v, 16);
+            if (Number.isNaN(num)) return '00';
+            const n = Math.max(0, Math.min(255, num));
+            return n.toString(16).toUpperCase().padStart(2,'0');
+        }
+
+        function hexToBinary2(hex2){
+            const num = parseInt(hex2, 16);
+            if (Number.isNaN(num)) return '00000000';
+            return num.toString(2).padStart(8,'0');
+        }
+
+        function getBitStatus(bitValue, bitConfig) {
+            if (!bitConfig.ok && !bitConfig.fault) return '';
+            return bitValue === '0' ? bitConfig.ok : bitConfig.fault;
+        }
+
+        function getStatusClass(text) {
+            if (!text) return 'status-neutral';
+            const lower = text.toLowerCase();
+
+            if (lower === 'n/a') return 'status-na';
+
+            // OK / good
+            if (lower.includes('ok') ||
+                lower.includes('serviceable') ||
+                lower.includes('available') ||
+                lower.includes('avail') ||
+                lower.includes('normal') ||
+                lower.includes('detected') ||
+                lower.includes('enabled') ||
+                (lower.includes('selected') && !lower.includes('not')) ||
+                lower === 'mode c' ||
+                lower === 'mode 3/a' ||
+                lower === 'mode d' ||
+                lower === 'mode 1' ||
+                lower === 'mode 2' ||
+                lower === 'mode b' ||
+                lower.includes('to ant') ||
+                lower.includes('channel to ant') ||
+                lower.includes('transmitting')) {
+                return 'status-ok';
+            }
+
+            // Fault / bad
+            if (lower.includes('fault') ||
+                (lower.includes('failed') && !lower.includes('opp')) ||
+                lower.includes('error') ||
+                (lower.includes('low') && lower.includes('fault')) ) {
+                return 'status-fault';
+            }
+
+            // Warning / maint
+            if (lower.includes('warning') || (lower.includes('maint') && !lower.includes('opp'))) {
+                return 'status-warning';
+            }
+
+            // Neutral operational
+            if (lower.includes('redundant') ||
+                lower.includes('stby') ||
+                lower.includes('disabled') ||
+                lower.includes('no request') ||
+                lower.includes('safe') ||
+                lower.includes('to dummy load') ||
+                lower.includes('interlock disabled') ||
+                lower.includes('opp int failed') ||
+                lower.includes('opp int maint') ||
+                lower.includes('local control')) {
+                return 'status-neutral';
+            }
+
+            return 'status-warning';
+        }
+
+        function createBinaryDisplay(binary) {
+            const container = document.createElement('div');
+            container.className = 'binary-display';
+            for (let bit of binary) {
+                const span = document.createElement('span');
+                span.className = `binary-bit ${bit === '1' ? 'one' : 'zero'}`;
+                span.textContent = bit;
+                container.appendChild(span);
+            }
+            return container;
+        }
+
+        function initState(){
+            decoderData.forEach(d=>{
+                stateHex[d.pos] = clampHexToByte(d.hex);
+            });
+        }
+
+        // ============================
+        // RENDER: TABLE MODE
+        // ============================
+        function renderTable() {
+            const tbody = document.getElementById('decoderBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            decoderData.forEach(rowData => {
+                const tr = document.createElement('tr');
+                tr.id = `row-${rowData.pos}`;
+
+                const tdPos = document.createElement('td');
+                tdPos.className = 'position-col';
+                tdPos.textContent = rowData.pos;
+                tr.appendChild(tdPos);
+
+                const tdHex = document.createElement('td');
+                tdHex.className = 'hex-col';
+                const hexInput = document.createElement('input');
+                hexInput.type = 'text';
+                hexInput.className = 'hex-input';
+                hexInput.placeholder = '00';
+                hexInput.value = (stateHex[rowData.pos] === '00' ? '' : stateHex[rowData.pos]);
+                hexInput.maxLength = 2;
+                hexInput.addEventListener('focus', ()=> setActivePos(rowData.pos, false));
+                hexInput.addEventListener('input', function(e) {
+                    const cleaned = e.target.value.toUpperCase().replace(/[^0-9A-F]/g,'').slice(0,2);
+                    e.target.value = cleaned;
+                    if (!cleaned){
+                        e.target.classList.remove('error');
+                        setHex(rowData.pos, '00', {from:'table'});
+                        return;
+                    }
+                    const num = parseInt(cleaned,16);
+                    if (!Number.isNaN(num) && num <= 255){
+                        e.target.classList.remove('error');
+                        setHex(rowData.pos, cleaned, {from:'table'});
+                    }else{
+                        e.target.classList.add('error');
+                    }
+                });
+                tdHex.appendChild(hexInput);
+                tr.appendChild(tdHex);
+
+                const tdDesc = document.createElement('td');
+                tdDesc.className = 'desc-col';
+                tdDesc.textContent = rowData.desc;
+                tr.appendChild(tdDesc);
+
+                const binary = hexToBinary2(stateHex[rowData.pos]);
+                const bits = binary.split('');
+
+                for (let i = 0; i < 8; i++) {
+                    const td = document.createElement('td');
+                    const status = getBitStatus(bits[i], rowData.bits[i]);
+                    td.className = `bit-col bit-${i} ${getStatusClass(status)}`;
+                    td.textContent = status;
+                    tr.appendChild(td);
+                }
+
+                const tdBinary = document.createElement('td');
+                tdBinary.className = 'binary-col binary-cell';
+                tdBinary.appendChild(createBinaryDisplay(binary));
+                tr.appendChild(tdBinary);
+
+                tbody.appendChild(tr);
+            });
+
+            updateAllViews();
+        }
+
+        function updateTableRow(pos){
+            const rowData = decoderData.find(d=>d.pos===pos);
+            const row = document.getElementById(`row-${pos}`);
+            if (!row || !rowData) return;
+
+            const hex2 = stateHex[pos];
+            const binary = hexToBinary2(hex2);
+            const bits = binary.split('');
+
+            const hexInput = row.querySelector('.hex-input');
+            if (hexInput && document.activeElement !== hexInput) hexInput.value = (hex2 === '00' ? '' : hex2);
+
+            for (let i=0;i<8;i++){
+                const bitCell = row.querySelector(`.bit-${i}`);
+                if (!bitCell) continue;
+                const status = getBitStatus(bits[i], rowData.bits[i]);
+                bitCell.textContent = status;
+                bitCell.className = `bit-col bit-${i} ${getStatusClass(status)}`;
+            }
+
+            const binaryCell = row.querySelector('.binary-cell');
+            if (binaryCell){
+                binaryCell.innerHTML = '';
+                binaryCell.appendChild(createBinaryDisplay(binary));
+            }
+        }
+
+        // ============================
+        // RENDER: INPUT MODE (CARDS)
+        // ============================
+        function renderCards(){
+            const wrap = document.getElementById('cardsContainer');
+            if (!wrap) return;
+            wrap.innerHTML = '';
+
+            decoderData.forEach(rowData=>{
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.id = `card-${rowData.pos}`;
+
+                const head = document.createElement('div');
+                head.className = 'card-head';
+
+                const title = document.createElement('div');
+                title.innerHTML = `<div class="card-title">POS ${rowData.pos}</div><div class="card-sub">${rowData.desc}</div>`;
+                head.appendChild(title);
+
+                const badge = document.createElement('div');
+                badge.id = `badge-${rowData.pos}`;
+                badge.className = 'status-neutral';
+                badge.style.fontWeight = '800';
+                badge.style.fontSize = '0.85em';
+                badge.style.padding = '4px 8px';
+                badge.style.borderRadius = '999px';
+                badge.style.border = '1px solid rgba(0,255,255,0.12)';
+                badge.style.background = 'rgba(0,0,0,0.20)';
+                badge.textContent = '—';
+                head.appendChild(badge);
+
+                const body = document.createElement('div');
+                body.className = 'card-body';
+
+                const hex = document.createElement('input');
+                hex.type = 'text';
+                hex.autocomplete = 'off';
+                hex.spellcheck = false;
+                hex.className = 'hex-big';
+                hex.maxLength = 2;
+                hex.placeholder = '00';
+                hex.value = (stateHex[rowData.pos] === '00' ? '' : stateHex[rowData.pos]);
+                hex.addEventListener('focus', ()=> setActivePos(rowData.pos, false));
+                hex.addEventListener('input', (e)=>{
+                    const cleaned = e.target.value.toUpperCase().replace(/[^0-9A-F]/g,'').slice(0,2);
+                    e.target.value = cleaned;
+                    if (!cleaned){
+                        hex.classList.remove('error');
+                        setHex(rowData.pos, '00', {from:'card'});
+                        return;
+                    }
+                    const num = parseInt(cleaned,16);
+                    if (!Number.isNaN(num) && num<=255){
+                        hex.classList.remove('error');
+                        setHex(rowData.pos, cleaned, {from:'card'});
+                        if (cleaned.length === 2) autoAdvanceFrom(rowData.pos);
+                    }else{
+                        hex.classList.add('error');
+                    }
+                });
+
+                const summary = document.createElement('div');
+                summary.className = 'card-summary';
+                summary.innerHTML = `
+                    <div class="summary-title">Résumé (non-OK)</div>
+                    <div class="summary-lines" id="sum-${rowData.pos}"><div class="summary-empty">OK</div></div>
+                `;
+
+                body.appendChild(hex);
+                body.appendChild(summary);
+
+                card.appendChild(head);
+                card.appendChild(body);
+                wrap.appendChild(card);
+            });
+        }
+
+        function updateCard(pos){
+            const rowData = decoderData.find(d=>d.pos===pos);
+            if (!rowData) return;
+            const hex2 = stateHex[pos];
+            const card = document.getElementById(`card-${pos}`);
+            if (!card) return;
+
+            const input = card.querySelector('.hex-big');
+            if (input && document.activeElement !== input) input.value = (hex2 === '00' ? '' : hex2);
+
+            const binary = hexToBinary2(hex2);
+            const bits = binary.split('');
+
+            const lines = [];
+            let worst = 'status-ok';
+
+            for (let i=0;i<8;i++){
+                const status = getBitStatus(bits[i], rowData.bits[i]);
+                const cls = getStatusClass(status);
+                if (status && (cls === 'status-fault' || cls === 'status-warning')){
+                    lines.push({text: `Bit ${i}: ${status}`, cls});
+                }
+                if (cls === 'status-fault') worst = 'status-fault';
+                else if (cls === 'status-warning' && worst !== 'status-fault') worst = 'status-warning';
+            }
+
+            const sum = document.getElementById(`sum-${pos}`);
+            if (sum){
+                if (!lines.length){
+                    sum.innerHTML = `<div class="summary-empty">OK</div>`;
+                }else{
+                    sum.innerHTML = lines.map(l=>`<div class="${l.cls}">${l.text}</div>`).join('');
+                }
+            }
+
+            const badge = document.getElementById(`badge-${pos}`);
+            if (badge){
+                badge.className = worst;
+                badge.textContent = (worst === 'status-fault') ? 'FAULT' : (worst === 'status-warning') ? 'WARN' : 'OK';
+            }
+        }
+
+        // ============================
+        // GLOBAL DIAGNOSTIC PANEL
+        // ============================
+        function updateDiagnostic(){
+            const diagnosticContent = document.getElementById('diagnosticContent');
+            if (!diagnosticContent) return;
+
+            const faults = [];
+            const warns = [];
+
+            decoderData.forEach(rowData=>{
+                const hex2 = stateHex[rowData.pos] || '00';
+                const bits = hexToBinary2(hex2).split('');
+                for (let i=0;i<8;i++){
+                    const status = getBitStatus(bits[i], rowData.bits[i]);
+                    const cls = getStatusClass(status);
+                    if (status && cls === 'status-fault'){
+                        faults.push({pos: rowData.pos, desc: rowData.desc, status});
+                    }else if (status && cls === 'status-warning'){
+                        warns.push({pos: rowData.pos, desc: rowData.desc, status});
+                    }
+                }
+            });
+
+            if (!faults.length && !warns.length){
+                diagnosticContent.innerHTML = '<div class="diagnostic-empty" data-i18n="diag_all_ok">Pass !!!</div>';
+                return;
+            }
+
+            const mk = (arr, cls, icon, title)=> {
+                if (!arr.length) return '';
+                const head = `<div style="margin:6px 0 8px; font-weight:800;" class="${cls}">${icon} ${title} (${arr.length})</div>`;
+                const items = arr.slice(0, 40).map(it=>{
+                    return `<div class="diagnostic-item ${cls}" style="cursor:pointer;" onclick="jumpToPos(${it.pos})">Pos ${it.pos} (${it.desc}): ${it.status}</div>`;
+                }).join('');
+                return head + items;
+            };
+
+            diagnosticContent.innerHTML =
+                mk(faults, 'status-fault', '❌', 'FAULTS') +
+                mk(warns,  'status-warning', '⚠️', 'WARNINGS');
+        }
+
+        function jumpToFirstFault(){
+            let target = null;
+
+            for (const rowData of decoderData){
+                const hex2 = stateHex[rowData.pos] || '00';
+                const bits = hexToBinary2(hex2).split('');
+                for (let i=0;i<8;i++){
+                    const status = getBitStatus(bits[i], rowData.bits[i]);
+                    const cls = getStatusClass(status);
+                    if (status && cls === 'status-fault'){
+                        target = rowData.pos;
+                        break;
+                    }
+                }
+                if (target) break;
+            }
+
+            if (!target){
+                for (const rowData of decoderData){
+                    const hex2 = stateHex[rowData.pos] || '00';
+                    const bits = hexToBinary2(hex2).split('');
+                    for (let i=0;i<8;i++){
+                        const status = getBitStatus(bits[i], rowData.bits[i]);
+                        const cls = getStatusClass(status);
+                        if (status && cls === 'status-warning'){
+                            target = rowData.pos;
+                            break;
+                        }
+                    }
+                    if (target) break;
+                }
+            }
+
+            if (target) jumpToPos(target);
+        }
+
+        // ============================
+        // STATE UPDATE
+        // ============================
+        function setHex(pos, value, opts={}){
+            const hex2 = clampHexToByte(value);
+            stateHex[pos] = hex2;
+
+            updateTableRow(pos);
+            updateCard(pos);
+            updateDiagnostic();
+        }
+
+        function updateAllViews(){
+            decoderData.forEach(d=>{
+                updateTableRow(d.pos);
+                updateCard(d.pos);
+            });
+            updateDiagnostic();
+        }
+
+        // ============================
+        // MODE SWITCH
+        // ============================
+        function setMode(mode){
+            const inputMode = document.getElementById('inputMode');
+            const tableMode = document.getElementById('tableMode');
+
+            const bIn = document.getElementById('btnModeInput');
+            const bTb = document.getElementById('btnModeTable');
+
+            if (mode === 'table'){
+                inputMode.classList.remove('active');
+                tableMode.classList.add('active');
+                bIn.classList.remove('active');
+                bTb.classList.add('active');
+                const row = document.getElementById(`row-${activePos}`);
+                if (row) row.scrollIntoView({behavior:'smooth', block:'center'});
+            }else{
+                tableMode.classList.remove('active');
+                inputMode.classList.add('active');
+                bTb.classList.remove('active');
+                bIn.classList.add('active');
+                jumpToPos(activePos);
+            }
+        }
+
+        // ============================
+        // ACTIVE POS + NAV
+        // ============================
+        function setActivePos(pos, shouldScroll){
+            activePos = pos;
+            if (!shouldScroll) return;
+
+            const card = document.getElementById(`card-${pos}`);
+            if (card){
+                card.scrollIntoView({behavior:'smooth', block:'center'});
+                const input = card.querySelector('.hex-big');
+                if (input) input.focus({preventScroll:true});
+                return;
+            }
+            const row = document.getElementById(`row-${pos}`);
+            if (row){
+                row.scrollIntoView({behavior:'smooth', block:'center'});
+                const input = row.querySelector('.hex-input');
+                if (input) input.focus({preventScroll:true});
+            }
+        }
+
+        function idxOf(pos){ return posList.indexOf(pos); }
+
+        function focusPrev(){
+            const i = idxOf(activePos);
+            const prev = posList[Math.max(0, i-1)];
+            jumpToPos(prev);
+        }
+        function focusNext(){
+            const i = idxOf(activePos);
+            const nxt = posList[Math.min(posList.length-1, i+1)];
+            jumpToPos(nxt);
+        }
+
+        function autoAdvanceFrom(pos){
+            const i = idxOf(pos);
+            if (i < posList.length-1) jumpToPos(posList[i+1]);
+        }
+
+        function jumpToPos(pos){
+            activePos = pos;
+            const isInput = document.getElementById('inputMode')?.classList.contains('active');
+
+            if (isInput){
+                const card = document.getElementById(`card-${pos}`);
+                if (card){
+                    card.scrollIntoView({behavior:'smooth', block:'center'});
+                    const input = card.querySelector('.hex-big');
+                    if (input) input.focus({preventScroll:true});
+                    return;
+                }
+            }
+            const row = document.getElementById(`row-${pos}`);
+            if (row){
+                row.scrollIntoView({behavior:'smooth', block:'center'});
+                const input = row.querySelector('.hex-input');
+                if (input) input.focus({preventScroll:true});
+            }
+        }
+
+        // ============================
+        
+        // ============================
+        // MODAL SCROLL LOCK (prevents background scrolling on mobile/WebView)
+        // ============================
+        function lockScroll(on){
+            document.documentElement.classList.toggle('modal-open', !!on);
+            document.body.classList.toggle('modal-open', !!on);
+        }
+
+// BULK PASTE
+        // ============================
+        function openBulk(){ document.getElementById('bulkModal').style.display = 'block'; lockScroll(true); }
+        function closeBulk(){ document.getElementById('bulkModal').style.display = 'none'; lockScroll(false); }
+
+        function applyBulk(){
+            const ta = (langUI==="en"?document.getElementById("bulkText_en"):document.getElementById("bulkText"));
+            if (!ta) return;
+            const txt = ta.value || '';
+            const tokens = txt.replace(/[\r\n,;]+/g,' ').trim();
+
+            const pairRe = /(\b\d{2}\b)\s*[:=]\s*([0-9A-Fa-f]{1,2})/g;
+            const foundPairs = [];
+            let m;
+            while ((m = pairRe.exec(tokens)) !== null){
+                const p = parseInt(m[1], 10);
+                const h = m[2];
+                if (p>=44 && p<=71) foundPairs.push([p,h]);
+            }
+
+            if (foundPairs.length){
+                foundPairs.forEach(([p,h])=> setHex(p, h, {from:'bulk'}));
+                closeBulk();
+                jumpToPos(foundPairs[0][0]);
+                return;
+            }
+
+            const vals = (txt.match(/[0-9A-Fa-f]{1,2}/g) || []).map(v=>v.toUpperCase());
+            for (let i=0;i<Math.min(vals.length, posList.length);i++){
+                setHex(posList[i], vals[i], {from:'bulk'});
+            }
+            closeBulk();
+            if (vals.length) jumpToPos(posList[0]);
+        }
+
+        // ============================
+        // EXISTING MODALS
+        // ============================
+        function openGuide() { document.getElementById('guideModal').style.display = 'block'; lockScroll(true); }
+        function closeGuide(){ document.getElementById('guideModal').style.display = 'none'; lockScroll(false); }
+        function openReference(){ document.getElementById('referenceModal').style.display = 'block'; lockScroll(true); }
+        function closeReference(){ document.getElementById('referenceModal').style.display = 'none'; lockScroll(false); }
+
+        window.onclick = function(event){
+            const guideModal = document.getElementById('guideModal');
+            const referenceModal = document.getElementById('referenceModal');
+            const bulkModal = document.getElementById('bulkModal');
+            if (event.target === guideModal) closeGuide();
+            if (event.target === referenceModal) closeReference();
+            if (event.target === bulkModal) closeBulk();
+        }
+
+        // ============================
+        // ACTIONS
+        // ============================
+        function clearAll() {
+            decoderData.forEach(d => setHex(d.pos, '00', {from:'clear'}));
+            jumpToPos(posList[0]);
+        }
+
+        // ============================
+        // INIT
+        // ============================
+        document.addEventListener('DOMContentLoaded', async ()=>{
+            // Configure Status Bar
+            if (window.Capacitor && window.Capacitor.Plugins.StatusBar) {
+                const { StatusBar } = window.Capacitor.Plugins;
+                try {
+                    await StatusBar.setStyle({ style: 'DARK' });
+                    await StatusBar.setBackgroundColor({ color: '#0a0e27' });
+                    await StatusBar.setOverlaysWebView({ overlay: false });
+                } catch (e) {
+                    console.log('StatusBar config error:', e);
+                }
+            }
+            
+            initState();
+            renderCards();
+            renderTable();
+            setMode('input');
+            jumpToPos(activePos);
+        });
+
+    
+        // ============================
+        // PWA: service worker
+        // ============================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch((e) => {
+                    console.log('ServiceWorker registration failed:', e);
+                });
+            });
+        }
+
+</script>
+</body>
+</html>
