@@ -1,6 +1,6 @@
 {
   "name": "SSR – Décodeur de fautes",
-  "short_name": "SSR 99",
+  "short_name": "SSR 99 Decoder",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
