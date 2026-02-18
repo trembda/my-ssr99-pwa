@@ -2352,8 +2352,9 @@ or
                 const summary = document.createElement('div');
                 summary.className = 'card-summary';
                 summary.innerHTML = `
-                  <div class="summary-title">Summary</div>
-                  <div class="summary-lines" id="sum-${rowData.pos}"><div class="summary-empty">OK</div></div>
+                  <div class="summary-lines" id="sum-${rowData.pos}">
+                  <div class="summary-empty">OK</div>
+                  </div>
                 `;
 
                 body.appendChild(hex);
