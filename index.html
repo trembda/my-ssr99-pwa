@@ -1481,7 +1481,6 @@ or
             btn_guide: "Guide d'utilisation",
             btn_reference: "Guide de référence",
 
-            sum_hdr: "Résumé (non-OK)",
             btn_clear: "Effacer tout",
             btn_bulk: "Coller lecture en lot",
             tip_guide: "Guide d\'utilisation",
@@ -1516,7 +1515,6 @@ ou
             btn_guide: "User Guide",
             btn_reference: "Reference Guide",
 
-            sum_hdr: "Summary (non-OK)", 
             btn_clear: "Clear all",
             btn_bulk: "Bulk paste (batch)",
             tip_guide: "User Guide",
@@ -2354,8 +2352,8 @@ or
                 const summary = document.createElement('div');
                 summary.className = 'card-summary';
                 summary.innerHTML = `
-                    <div class="summary-title" data-i18n="sum_hdr"></div>
-                    <div class="summary-lines" id="sum-${rowData.pos}"><div class="summary-empty">OK</div></div>
+                  <div class="summary-title">Summary</div>
+                  <div class="summary-lines" id="sum-${rowData.pos}"><div class="summary-empty">OK</div></div>
                 `;
 
                 body.appendChild(hex);
