@@ -1,5 +1,5 @@
 /* SSR 99 PWA Service Worker */
-const CACHE = 'ssr99-v15';
+const CACHE = 'ssr99-v16';
 const ASSETS = [
   './',
   './index.html',
