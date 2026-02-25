@@ -2143,9 +2143,14 @@ or
                 (lower.includes('low') && lower.includes('fault')) ) {
                 return 'status-fault';
             }
-            // Warning / maint
-            if (lower.includes('warning') || (lower.includes('maint') && !lower.includes('opp'))) {
-                return 'status-warning';
+           // MAINT seulement (on ignore WARNING)
+            if (lower.includes('maint') && !lower.includes('opp')) {
+            return 'status-warning';
+            }
+
+            // WARNING: traité comme neutre (donc ne remonte pas)
+            if (lower.includes('warning')) {
+            return 'status-neutral';
             }
             
             // Neutral operational
@@ -2425,8 +2430,12 @@ or
                     const cls = getStatusClass(status);
                     if (status && cls === 'status-fault'){
                         faults.push({pos: rowData.pos, desc: rowData.desc, status});
-                    }else if (status && cls === 'status-warning'){
-                        warns.push({pos: rowData.pos, desc: rowData.desc, status});
+}else if (status && cls === 'status-warning'){
+    // On ne garde que MAINT (pas les WARNING)
+    if (status.toLowerCase().includes('maint')) {
+        warns.push({pos: rowData.pos, desc: rowData.desc, status});
+    }
+}
                     }
                 }
             });
