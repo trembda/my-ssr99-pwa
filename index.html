@@ -2143,7 +2143,11 @@ or
                 (lower.includes('low') && lower.includes('fault')) ) {
                 return 'status-fault';
             }
-
+            // Warning / maint
+            if (lower.includes('warning') || (lower.includes('maint') && !lower.includes('opp'))) {
+                return 'status-warning';
+            }
+            
             // Neutral operational
             if (lower.includes('redundant') ||
                 lower.includes('stby') ||
